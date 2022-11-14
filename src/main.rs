@@ -11,7 +11,6 @@ fn main() {
         "two: {:?}",
         matches.get_one::<String>("two").expect("required")
     );
-
     println!(
         "one: {:?}",
         matches.get_one::<String>("one").expect("required")
@@ -25,7 +24,6 @@ mod tests {
     #[test]
     fn it_works() {
         let result = 2 + 2;
-
     }
 }
 

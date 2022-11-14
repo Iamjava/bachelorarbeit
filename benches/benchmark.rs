@@ -1,9 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use lib::a;
+use ba_lib::a;
 
 pub fn criterion_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("benchgroup");
+
     group.warm_up_time(std::time::Duration::from_secs(10));
     group.measurement_time(std::time::Duration::from_secs(15));
     group.sample_size(1000);

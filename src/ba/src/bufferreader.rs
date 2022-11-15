@@ -31,24 +31,24 @@ mod tests {
 
     #[test]
     fn test_diskreader_multithread() {
-        let data = vec![0; 10];
-        let data2 = vec![0; 10];
+        let data = vec![0; 20];
+        let data2 = vec![0; 20];
         //dr.read(data,10,);
 
         let a = thread::spawn(move || {
             let ring = Arc::new(rio::new().expect("couldnt initialize io_uring"));
             let binding = ring.clone();
             let dr = DiskReader::new(&binding, FILENAME);
-            let data = dr.read(data, 10);
-            println!("a {}", String::from_utf8_lossy(&data))
+            let data = dr.read(data, 33);
+            println!("a read'{}'", String::from_utf8_lossy(&data))
         });
 
         let b = thread::spawn(move || {
             let ring = Arc::new(rio::new().expect("couldnt initialize io_uring"));
             let binding = ring.clone();
             let dr = DiskReader::new(&binding, FILENAME);
-            let data = dr.read(data2, 11);
-            println!("b {}", String::from_utf8_lossy(&data))
+            let data = dr.read(data2, 22);
+            println!("b read'{}'", String::from_utf8_lossy(&data))
         });
 
         let _adata = a.join().unwrap();

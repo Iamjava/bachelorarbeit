@@ -1,42 +1,57 @@
-use std::io::{Read, Seek, SeekFrom};
-use rand::Rng;
-use std::{
-    fs::OpenOptions,
-    io::{Result},
-    os::unix::fs::OpenOptionsExt,
-};
-use std::os::unix::io::AsRawFd;
+use std::{fs, path};
 use std::sync::Arc;
+#[derive(Debug)]
+struct DiskReader<'a> {
+    ring: &'a rio::Rio,
+    file: fs::File,
+}
 
-async fn test_async_rio_oo(read_positions:impl std::iter::IntoIterator<Item=u64>, file_name: &'static str, _worker_fn: fn(&Vec<u8>)) {
-    let ring = Arc::new(rio::new().expect("create uring"));
-    let data:[u8;4096] = [0;4096];
-    let  _results = read_positions.into_iter().map(|x|(x,ring.clone(),data.clone())).map(|(x,ring,mut data)| async move{
-        let n = x as u64;
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .custom_flags(0x4000) // equivalent to libc::O_DIRECT
-            .open(file_name)
-            .expect("open file");
-        //let mut data: &mut [u8] = &mut [0; 4096];
-        let completion = ring.read_at(&file, &mut data, n);
-        completion.await
-        // if using async
-    });
+impl DiskReader<'_> {
+    fn new<'a>(ring: &rio::Rio, file_path: impl AsRef<path::Path>) -> DiskReader<'_> {
+        DiskReader {
+            ring: ring,
+            file: fs::File::open(file_path.as_ref()).expect("ERROR: File not found, cant initialize DiskReader"),
+        }
+    }
+
+    fn read(&self, data: Vec<u8>, at: u64) -> Vec<u8> {
+        let completion = self.ring.read_at(&self.file, &data, at);
+        completion.wait().unwrap();
+        //println!("{:?}",String::from_utf8_lossy(&data[0..100]));
+        data
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
     use crate::bufferreader::*;
-    static FILENAME: &str = "src/hello.txt";
+
+    static FILENAME: &str = "../../.gitignore";
 
     #[test]
-    fn async_test_rio_uring_odirect() {
-        let mut rng = rand::thread_rng();
-        let tests: Vec<u64> = (0..10_00_000).map(|_| rng.gen_range(0..2022 / 8)).collect();
-        test_async_rio_oo(tests, FILENAME, |x|print!("a"));
+    fn test_diskreader_multithread() {
+        let data = vec![0; 10];
+        let data2 = vec![0; 10];
+        //dr.read(data,10,);
+
+        let a = thread::spawn(move || {
+            let ring = Arc::new(rio::new().expect("couldnt initialize io_uring"));
+            let binding = ring.clone();
+            let dr = DiskReader::new(&binding, FILENAME);
+            let data = dr.read(data, 10);
+            println!("a {}", String::from_utf8_lossy(&data))
+        });
+
+        let b = thread::spawn(move || {
+            let ring = Arc::new(rio::new().expect("couldnt initialize io_uring"));
+            let binding = ring.clone();
+            let dr = DiskReader::new(&binding, FILENAME);
+            let data = dr.read(data2, 11);
+            println!("b {}", String::from_utf8_lossy(&data))
+        });
+
+        let _adata = a.join().unwrap();
+        let _bdata = b.join().unwrap();
     }
 }

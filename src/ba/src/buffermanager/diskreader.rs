@@ -1,6 +1,6 @@
 use std::{fs, path};
+use std::os::unix::fs::FileExt;
 use crate::{PAGE_SIZE,Page,DEFAULT_FILENAME};
-use std::thread;
 
 #[derive(Debug)]
 pub struct DiskReader {
@@ -26,17 +26,17 @@ impl DiskReader {
     }
 
     pub fn read(&self, data: Vec<u8>, at: u64) -> Page {
+        dbg!(&data.len());
         let completion = self.ring.read_at(&self.file, &data, at);
         completion.wait().unwrap();
-        data
+        dbg!(data)
     }
 
     //strange behavior if calling read
-    pub fn allocate_and_read(&self, at: u64) -> Page {
-        let data = Vec::with_capacity(PAGE_SIZE);
-        let completion = self.ring.read_at(&self.file, &data, at);
-        completion.wait().unwrap();
-        data
+    pub fn read_classic(&self, at: u64) -> Page {
+        let mut data = [0;10];
+        let _read = self.file.read_at(&mut data,at).unwrap();
+        data.to_vec()
     }
 }
 
@@ -76,10 +76,10 @@ mod tests {
     fn test_default(){
         let b = thread::spawn(move || {
             let dr = DiskReader::default();
-            let data = dr.allocate_and_read(0);
+            let data = dr.read_classic(0);
             assert!(!data.is_empty())
         });
-        b.join();
+        let _ = b.join();
     }
 
     #[test]
@@ -92,6 +92,6 @@ mod tests {
             assert!(data.len()>0);
             println!("a read'{}'", String::from_utf8_lossy(&data))
         });
-        a.join();
+        let _ = a.join();
     }
 }

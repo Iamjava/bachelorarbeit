@@ -9,6 +9,7 @@ edition = "2021"
 clap = {version="4.0.18",features=["cargo"]}
 ba_lib = {path = "src/ba" }
 
+
 [dev-dependencies]
 criterion = "0.4"
 

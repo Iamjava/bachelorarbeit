@@ -1,7 +1,10 @@
+mod buffermanager;
+pub type Page= Vec<u8>;
+pub type PageIdentifier = u64;
+pub const PAGE_SIZE: usize = 1;
+pub const  DEFAULT_FILENAME: &str = "../../.gitignore";
+pub const BUFFER_SIZE: u64 = 20;
 
-mod bufferreader;
-type Page= Vec<u8>;
-pub const PAGE_SIZE: usize = 10;
 pub fn a()->i32{
     return 1;
 }
@@ -20,7 +23,7 @@ impl Unary
     fn get_next(&mut self, f: fn(&u8)->bool)->Page{
         let mut counter:usize = self.state;
         let mut last_item = 0;
-        let mut next_page_vecs :Vec<u8> = Vec::with_capacity(PAGE_SIZE);
+        let mut next_page_vecs: Vec<u8> = Vec::with_capacity(PAGE_SIZE);
 
         let flat_inner: Vec<&u8>= self.inner.iter().flatten().collect();
         while next_page_vecs.len()<PAGE_SIZE{
@@ -45,12 +48,12 @@ mod tests {
 
     #[test]
     fn test_filter() {
-        let vecs :Vec<Page>= vec![vec![4;4],vec![1;PAGE_SIZE],vec![5;PAGE_SIZE],vec![4;PAGE_SIZE],vec![6;PAGE_SIZE]];
+        let vecs :Vec<Page>= vec![vec![1;PAGE_SIZE],vec![5;PAGE_SIZE],vec![4;PAGE_SIZE],vec![6;PAGE_SIZE]];
 
         let mut unary = Unary::new(vecs);
         println!("PAGES");
-        println!("{:?}",  &unary.get_next(|a| a>&3)[0..10]);
-        println!("{:?}",  &unary.get_next(|a| a>&3)[0..10]);
-        println!("{:?}",  &unary.get_next(|a| a>&2)[0..10]);
+        println!("{:?}",  &unary.get_next(|a| a>&3));
+        println!("{:?}",  &unary.get_next(|a| a>&3));
+        println!("{:?}",  &unary.get_next(|a| a>&3));
     }
 }

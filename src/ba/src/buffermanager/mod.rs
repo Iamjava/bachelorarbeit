@@ -1,30 +1,38 @@
 use std::collections;
-use crate::{Page, PAGE_SIZE, PageIdentifier};
+use crate::{Operator, Page, PAGE_SIZE, PageIdentifier, VulcanoRequest, };
 use crate::BUFFER_SIZE;
+use crate::VulcanoRequest::{INDEX, SCAN_ALL};
 
 mod diskreader;
 
 #[derive(Debug)]
-struct Buffermanager{
+pub struct Buffermanager{
     buffer: collections::HashMap<PageIdentifier,Page>,
     disk_reader: diskreader::DiskReader,
+    workload: VulcanoRequest,
+    state: usize,
 }
 
 impl Buffermanager{
-    fn new()->Self{
+    pub fn new()->Self{
         Buffermanager{
             buffer: collections::HashMap::with_capacity(BUFFER_SIZE.try_into().unwrap()),
             disk_reader: diskreader::DiskReader::default(),
+            workload: SCAN_ALL,
+            state: 0,
         }
     }
 
-    fn get_page(&mut self, pageid: PageIdentifier)->&Page{
-        if !self.buffer.contains_key(&pageid){
-            let read_page = dbg!(self.disk_reader.read_classic(pageid));
-            self.buf_insert(pageid,read_page.clone());
+    pub fn get_page(&mut self, pageid: &PageIdentifier)->Option<&Page>{
+
+        if !self.buffer.contains_key(pageid){
+            let read_page = self.disk_reader.read_classic(*pageid)?;
+                self.buf_insert(*pageid,read_page.clone());
         }
-        &self.buffer.get(&pageid).unwrap()  //safe since key is part of buffer
+        self.state = self.state +1;
+        Some(&self.buffer.get(pageid).unwrap())  //safe since key is part of buffer
     }
+
     fn buf_insert(&mut self, pageid: PageIdentifier, page: Page){
         self.buffer.insert(pageid,page.clone());
     }
@@ -35,11 +43,54 @@ impl Buffermanager{
     }
 }
 
+impl Operator<Page> for Buffermanager{
+    fn open() -> Self {
+        Buffermanager::new()
+    }
+
+    fn next(&mut self) -> Option<Page> {
+        match &self.workload{
+            INDEX(indicies)=>{ todo!() },
+            SCAN_ALL =>{
+                let to_read = self.state.clone();
+                let read = self.get_page(&to_read.try_into().unwrap() )?;
+                Some(read.clone())
+            }
+        }
+    }
+
+    fn close(&self) {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::buffermanager::Buffermanager;
     use crate::buffermanager::diskreader::DiskReader;
-    use crate::{BUFFER_SIZE, PAGE_SIZE} ;
+    use crate::{BUFFER_SIZE, Page, PAGE_SIZE, };
+    use crate::Operator;
+    use crate::VulcanoRequest::INDEX;
+
+    #[test]
+    fn test_next(){
+        let mut  bm  = Buffermanager::open();
+        let next = bm.next().unwrap();
+        print!("{:?}",next)
+    }
+
+
+    #[test]
+    fn test_next_fail(){
+        let mut  bm  = Buffermanager::open();
+        for i in 0..1000{
+            let _ = bm.next();
+        }
+        let next  = bm.next();
+        assert!(bm.state!=0);
+        assert_eq!(next,None)
+
+    }
 
     #[test]
     fn test_default(){
@@ -59,8 +110,8 @@ mod tests {
     fn test_buffermanager() {
         // let mut bm = Buffermanager::new();
         let mut  bm  = Buffermanager::new();
-        bm.get_page(0);
+        bm.get_page(&0);
         assert!(bm.buf_contains(&0));
-        assert!(!bm.get_page(0).is_empty());
+        assert!(!bm.get_page(&0).expect("ERROR BUFFERMANAGER").is_empty());
     }
 }

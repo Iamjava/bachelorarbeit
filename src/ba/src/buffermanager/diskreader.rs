@@ -1,6 +1,7 @@
 use std::{fs, path};
 use std::os::unix::fs::FileExt;
-use crate::{PAGE_SIZE,Page,DEFAULT_FILENAME};
+use crate::{PAGE_SIZE, Page, DEFAULT_FILENAME, };
+
 
 #[derive(Debug)]
 pub struct DiskReader {
@@ -9,10 +10,10 @@ pub struct DiskReader {
 }
 
 
-impl Default for DiskReader{
+impl Default for DiskReader {
     fn default() -> Self{
         let ring = rio::new().expect("couldnt initialize io_uring");
-        let dr = DiskReader::new(ring,DEFAULT_FILENAME);
+        let dr = DiskReader::new(ring, DEFAULT_FILENAME);
         dr
     }
 }
@@ -33,10 +34,15 @@ impl DiskReader {
     }
 
     //strange behavior if calling read
-    pub fn read_classic(&self, at: u64) -> Page {
-        let mut data = [0;10];
-        let _read = self.file.read_at(&mut data,at).unwrap();
-        data.to_vec()
+    pub fn read_classic(&self, page_num: u64) -> Option<Page> {
+        let mut data = [0;PAGE_SIZE];
+        let filesize = self.file.metadata().unwrap().len();
+        if filesize > page_num * (PAGE_SIZE as u64){
+            let _read = self.file.read_at(&mut data,page_num*(PAGE_SIZE as u64)).unwrap();
+            Some(data.to_vec())
+        } else {
+           None
+        }
     }
 }
 
@@ -62,7 +68,7 @@ mod tests {
 
         let b = thread::spawn(move || {
             let ring = rio::new().expect("couldnt initialize io_uring");
-            let dr = DiskReader::new(ring,DEFAULT_FILENAME);
+            let dr = DiskReader::new(ring, DEFAULT_FILENAME);
             let data = dr.read(data2, 0);
             assert!(data.len()>0);
             println!("b read'{}'", String::from_utf8_lossy(&data))
@@ -73,13 +79,10 @@ mod tests {
     }
 
     #[test]
-    fn test_default(){
-        let b = thread::spawn(move || {
-            let dr = DiskReader::default();
-            let data = dr.read_classic(0);
-            assert!(!data.is_empty())
-        });
-        let _ = b.join();
+    fn test_classic(){
+        let dr = DiskReader::default();
+        let data = dr.read_classic(9999999);
+        assert_eq!(data, None);
     }
 
     #[test]

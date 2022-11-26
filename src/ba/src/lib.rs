@@ -1,4 +1,4 @@
-
+//#![feature(associated_type_bounds)]
 use crate::VulcanoRequest::*;
 
 pub mod buffermanager;
@@ -6,7 +6,7 @@ pub mod operator;
 
 pub type Page = Vec<u8>;
 pub type PageIdentifier = u64; // RID equivalent
-pub const PAGE_SIZE: usize = 6;
+pub const CHUNK_SIZE: usize = 4096;
 pub const DEFAULT_FILENAME: &str = "../../.gitignore";
 pub const BUFFER_SIZE: u64 = 20;
 

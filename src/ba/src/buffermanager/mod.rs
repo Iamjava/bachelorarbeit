@@ -1,5 +1,5 @@
 use std::collections;
-use crate::{Operator, Page, PAGE_SIZE, PageIdentifier, VulcanoRequest, };
+use crate::{Operator, Page, CHUNK_SIZE, PageIdentifier, VulcanoRequest, };
 use crate::BUFFER_SIZE;
 use crate::VulcanoRequest::{INDEX, SCAN_ALL};
 
@@ -68,7 +68,7 @@ impl Operator<Page> for Buffermanager{
 mod tests {
     use crate::buffermanager::Buffermanager;
     use crate::buffermanager::diskreader::DiskReader;
-    use crate::{BUFFER_SIZE, Page, PAGE_SIZE, };
+    use crate::{BUFFER_SIZE, Page, CHUNK_SIZE, };
     use crate::Operator;
     use crate::VulcanoRequest::INDEX;
 

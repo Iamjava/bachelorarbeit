@@ -1,6 +1,6 @@
 use std::{fs, path};
 use std::os::unix::fs::FileExt;
-use crate::{PAGE_SIZE, Page, DEFAULT_FILENAME, };
+use crate::{CHUNK_SIZE, Page, DEFAULT_FILENAME, };
 
 
 #[derive(Debug)]
@@ -35,10 +35,10 @@ impl DiskReader {
 
     //strange behavior if calling read
     pub fn read_classic(&self, page_num: u64) -> Option<Page> {
-        let mut data = [0;PAGE_SIZE];
+        let mut data = [0; CHUNK_SIZE];
         let filesize = self.file.metadata().unwrap().len();
-        if filesize > page_num * (PAGE_SIZE as u64){
-            let _read = self.file.read_at(&mut data,page_num*(PAGE_SIZE as u64)).unwrap();
+        if filesize > page_num * (CHUNK_SIZE as u64){
+            let _read = self.file.read_at(&mut data,page_num*(CHUNK_SIZE as u64)).unwrap();
             Some(data.to_vec())
         } else {
            None

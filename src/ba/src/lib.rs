@@ -1,7 +1,6 @@
 extern crate core;
 
 //#![feature(associated_type_bounds)]
-
 pub mod buffermanager;
 pub mod operator;
 
@@ -12,13 +11,11 @@ pub const CHUNK_SIZE: usize = 5;
 pub const DEFAULT_FILENAME: &str = "../../.gitignore";
 pub const BUFFER_SIZE: u64 = 20;
 
-
 #[derive(Debug)]
 pub enum VulcanoRequest{
     ScanAll,
     Inedx(Vec<PageIdentifier>)
 }
-
 
 pub trait Operator<T>{
     fn open()->Self where Self: Sized;

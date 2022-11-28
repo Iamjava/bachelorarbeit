@@ -30,7 +30,6 @@ impl Operator<Page> for Scan{
 mod tests {
     use crate::operator::scan::Scan;
     use crate::Operator;
-
     #[test]
     fn test_open(){
         let open = Scan::open();

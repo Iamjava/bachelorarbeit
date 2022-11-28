@@ -4,15 +4,15 @@ use crate::buffermanager::Buffermanager;
 
 #[derive(Debug)]
 pub struct Scan {
-    bm: Buffermanager,
+    _bm: Buffermanager,
     // read pages as list of lists (vector at a time)
     state: usize,
 }
 
 impl Operator<Page> for Scan{
-    fn open() -> Self {
+    fn open() -> Self where Self: Sized{
         Scan {
-            bm: Buffermanager::new(),
+            _bm: Buffermanager::new(),
             state: 0,
         }
     }

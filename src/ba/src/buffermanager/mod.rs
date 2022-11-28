@@ -1,7 +1,7 @@
 use std::collections;
-use crate::{Operator, Page, CHUNK_SIZE, PageIdentifier, VulcanoRequest, };
+use crate::{Operator, Page, PageIdentifier, VulcanoRequest, };
 use crate::BUFFER_SIZE;
-use crate::VulcanoRequest::{INDEX, SCAN_ALL};
+use crate::VulcanoRequest::{Inedx, ScanAll};
 
 mod diskreader;
 
@@ -18,7 +18,7 @@ impl Buffermanager{
         Buffermanager{
             buffer: collections::HashMap::with_capacity(BUFFER_SIZE.try_into().unwrap()),
             disk_reader: diskreader::DiskReader::default(),
-            workload: SCAN_ALL,
+            workload: ScanAll,
             state: 0,
         }
     }
@@ -44,14 +44,14 @@ impl Buffermanager{
 }
 
 impl Operator<Page> for Buffermanager{
-    fn open() -> Self {
+    fn open() -> Self where Self: Sized{
         Buffermanager::new()
     }
 
     fn next(&mut self) -> Option<Page> {
         match &self.workload{
-            INDEX(indicies)=>{ todo!() },
-            SCAN_ALL =>{
+            Inedx(_indicies)=>{ todo!() },
+            ScanAll =>{
                 let to_read = self.state.clone();
                 let read = self.get_page(&to_read.try_into().unwrap() )?;
                 Some(read.clone())
@@ -68,9 +68,8 @@ impl Operator<Page> for Buffermanager{
 mod tests {
     use crate::buffermanager::Buffermanager;
     use crate::buffermanager::diskreader::DiskReader;
-    use crate::{BUFFER_SIZE, Page, CHUNK_SIZE, };
+    use crate::{BUFFER_SIZE, };
     use crate::Operator;
-    use crate::VulcanoRequest::INDEX;
 
     #[test]
     fn test_next(){
@@ -83,7 +82,7 @@ mod tests {
     #[test]
     fn test_next_fail(){
         let mut  bm  = Buffermanager::open();
-        for i in 0..1000{
+        for _i in 0..1000{
             let _ = bm.next();
         }
         let next  = bm.next();

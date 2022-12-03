@@ -12,7 +12,7 @@ pub struct Filter<T: Operator<Page>> {
 
 impl<T: Operator<Page>> Filter<T>
 {
-    fn instanciate(operator: T, predicate: fn(&u8) ->bool) -> Option<Self> {
+    fn try_new(operator: T, predicate: fn(&u8) ->bool) -> Option<Self> {
         let mut filter = Filter {
             state: 0,
             is_finished: false,
@@ -20,23 +20,10 @@ impl<T: Operator<Page>> Filter<T>
             child: operator,
             predicate: predicate
         };
-
         filter.inner = filter.child.next().unwrap();
         Some(filter)
     }
 
-    /*
-    fn get_next_vectorized<P>(&mut self, p: P) -> Option<Page> where P: Fn(&&u8) -> bool {
-        // vielleicht über iter_array_chunks nachdenken.
-        let ret = self.inner_test.iter()
-            .filter(p)
-            .copied()
-            .collect::<Vec<u8>>()
-            .chunks(CHUNK_SIZE)
-            .collect::<Vec<u8>>();
-        Some(ret)
-    }
-*/
     fn get_next(&mut self, predicate: fn(&u8) -> bool) -> Option<Page> {
         if self.is_finished{
             return None
@@ -98,7 +85,7 @@ mod tests {
     #[test]
     fn test_filter_1() {
         let bm = ScanMock::new( vec![vec![3; 1]]);
-        let mut filter1 = Filter::instanciate( bm, |x|x>&2).unwrap();
+        let mut filter1 = Filter::try_new(bm, |x|x>&2).unwrap();
         let last= filter1.next();
         assert!(last.is_some());
         assert!(filter1.next().is_none());
@@ -107,7 +94,7 @@ mod tests {
     #[test]
     fn test_filter_2() {
         let bm = ScanMock::new( vec![vec![3; CHUNK_SIZE], vec![4; CHUNK_SIZE-3]]);
-        let mut filter1 = Filter::instanciate( bm, |x|x>&2).unwrap();
+        let mut filter1 = Filter::try_new(bm, |x|x>&2).unwrap();
         filter1.next();
         let last= filter1.next();
         assert!(last.is_some())
@@ -116,8 +103,8 @@ mod tests {
     #[test]
     fn test_double_filter() {
         let bm = ScanMock::new( vec![vec![3; 1]]);
-        let filter1 = Filter::instanciate( bm, |x|x>=&2).unwrap();
-        let mut filter2 = Filter::instanciate(filter1, |x|x>&10).unwrap();
+        let filter1 = Filter::try_new(bm, |x|x>=&2).unwrap();
+        let mut filter2 = Filter::try_new(filter1, |x|x>&10).unwrap();
         let a = filter2.next();
         assert!( a.is_none());
     }
@@ -125,8 +112,8 @@ mod tests {
     #[test]
     fn test_double_filter_1_5() {
         let bm = ScanMock::new( vec![vec![122; CHUNK_SIZE],vec![4;CHUNK_SIZE],vec![5;CHUNK_SIZE]]);
-        let filter1 = Filter::instanciate( bm, |x|x>=&2).unwrap();
-        let mut filter2 = Filter::instanciate(filter1, |x|x>&4).unwrap();
+        let filter1 = Filter::try_new(bm, |x|x>=&2).unwrap();
+        let mut filter2 = Filter::try_new(filter1, |x|x>&4).unwrap();
         let a = filter2.next();
         filter2.next();
         assert!( a.is_some());
@@ -134,8 +121,8 @@ mod tests {
     #[test]
     fn test_double_filter_2() {
         let bm = ScanMock::new( vec![vec![122; CHUNK_SIZE-1],vec![4;CHUNK_SIZE],vec![5;CHUNK_SIZE]]);
-        let filter1 = Filter::instanciate( bm, |x|x>=&2).unwrap();
-        let mut filter2 = Filter::instanciate(filter1, |x|x>&4).unwrap();
+        let filter1 = Filter::try_new(bm, |x|x>=&2).unwrap();
+        let mut filter2 = Filter::try_new(filter1, |x|x>&4).unwrap();
         let a = filter2.next();
         filter2.next();
         assert!( a.is_some());

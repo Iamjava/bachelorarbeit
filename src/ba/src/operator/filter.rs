@@ -1,18 +1,18 @@
-use crate::{Operator};
-use crate::{Page, CHUNK_SIZE,};
+use crate::{FromBytes, Operator};
+use crate::{ CHUNK_SIZE,};
 
-pub struct Filter<T: Operator<Page>> {
-    inner: Page,
-    child:  T,
+pub struct Filter<F: FromBytes,O: Operator<F>> {
+    inner: Vec<F>,
+    child: O,
     is_finished:bool,
     // read pages as list of lists (vector at a time)
     state: usize,
-    predicate: fn(&u8)->bool,
+    predicate: fn(&F)->bool,
 }
 
-impl<T: Operator<Page>> Filter<T>
+impl<F: FromBytes + Clone + Default,O: Operator<F>> Filter<F,O>
 {
-    fn try_new(operator: T, predicate: fn(&u8) ->bool) -> Option<Self> {
+    fn try_new(operator: O, predicate: fn(&F) ->bool) -> Option<Self> {
         let mut filter = Filter {
             state: 0,
             is_finished: false,
@@ -24,17 +24,17 @@ impl<T: Operator<Page>> Filter<T>
         Some(filter)
     }
 
-    fn get_next(&mut self, predicate: fn(&u8) -> bool) -> Option<Page> {
+    fn get_next(&mut self, predicate: fn(&F) -> bool) -> Option<Vec<F>> {
         if self.is_finished{
             return None
         }
 
         let mut local_state: usize = self.state;
-        let mut next_page_vec: Vec<u8> = Vec::with_capacity(CHUNK_SIZE);
+        let mut next_page_vec: Vec<F> = Vec::with_capacity(CHUNK_SIZE);
 
         while next_page_vec.len() < CHUNK_SIZE {
-            let item = self.inner[local_state];
-            if predicate(&item){
+            let item = &self.inner[local_state];
+            if predicate(item){
                 next_page_vec.push(item.clone());
             }
             local_state = local_state +1;
@@ -52,7 +52,7 @@ impl<T: Operator<Page>> Filter<T>
                     }else if next_page_vec.len() ==0 {
                         return None;
                     }else{
-                        let mut to_append = vec![0; CHUNK_SIZE- next_page_vec.len()];
+                        let mut to_append = vec![F::default(); CHUNK_SIZE- next_page_vec.len()];
                         next_page_vec.append(& mut to_append);
                         return Some(next_page_vec);
                     }
@@ -64,11 +64,11 @@ impl<T: Operator<Page>> Filter<T>
     }
 }
 
-impl<T: Operator<Page>> Operator<Page> for Filter<T> {
+impl<F:FromBytes + Clone + Default,O: Operator<F>,> Operator<F> for Filter<F,O> {
     fn open() -> Self {
         todo!()
     }
-    fn next(&mut self) -> Option<Page> {
+    fn next(&mut self) -> Option<Vec<F>> {
         self.get_next(self.predicate)
     }
     fn close(&self) {
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_filter_1() {
-        let bm = ScanMock::new( vec![vec![3; 1]]);
+        let bm = ScanMock::<InnerPage>::new( vec![vec![3; 1]]);
         let mut filter1 = Filter::try_new(bm, |x|x>&2).unwrap();
         let last= filter1.next();
         assert!(last.is_some());

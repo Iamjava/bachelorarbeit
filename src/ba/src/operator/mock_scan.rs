@@ -1,14 +1,13 @@
-#![feature(trait_alias)]
-use crate::{Chunk, CHUNK_SIZE, Operator, FromBytes, Page};
+use crate::{Chunk, CHUNK_SIZE, Operator, FromBytes, Page, InnerPage};
 use std::default::Default;
 
-pub struct ScanMock<T> {
-    inner: Vec<T>,
+pub struct ScanMock<F> {
+    inner: Vec<Vec<F>>,
     state: u32,
 }
 
-impl ScanMock<Page> {
-    pub fn new(inner: Vec<Page>) -> Self{
+impl<F: FromBytes + Clone + Default> ScanMock<F> {
+    pub fn new(inner: Vec<Vec<F>>) -> Self{
         ScanMock {
             inner,
             state: 0,
@@ -17,35 +16,35 @@ impl ScanMock<Page> {
 }
 
 impl<T: FromBytes> ScanMock<T>{
-    fn from_page(item: Vec<i32>) -> Chunk<T>{
-       let ret =  T::toSelf();
+    fn from_page(item: Page) -> Chunk<T>{
+       let ret =  T::to_self(&item);
         ret
     }
 }
 
-impl Default for ScanMock<Page>{
+impl Default for ScanMock<InnerPage>{
     fn default() -> Self{
-        ScanMock::new(vec![vec![1;CHUNK_SIZE],vec![2;CHUNK_SIZE],vec![3;CHUNK_SIZE],vec![5;CHUNK_SIZE],vec![6;CHUNK_SIZE],vec![7;CHUNK_SIZE],])
+        ScanMock::new(vec![vec![1 as u8;CHUNK_SIZE],vec![2;CHUNK_SIZE],vec![3;CHUNK_SIZE],vec![5;CHUNK_SIZE],vec![6;CHUNK_SIZE],vec![7;CHUNK_SIZE],])
     }
 }
 
-impl<T> Operator<T> for ScanMock<T> {
+impl<T: Clone> Operator<T> for ScanMock<T> {
     fn open() -> Self where Self: Sized {
         todo!()
     }
 
     fn next(&mut self) -> Option<Vec<T>> {
-        if self.state >= self.inner.len().try_into().unwrap() {
+        if self.state >= self.inner.iter().flatten().count().try_into().unwrap() {
             return None;
         }
 
-        let mut page: Page = self.inner.iter().skip(self.state.try_into().unwrap()).take(CHUNK_SIZE).copied().collect();
-        if page.len() < CHUNK_SIZE.try_into().unwrap() {
-            while page.len() < CHUNK_SIZE {
-                page.push(0);
-            }
-        }
+        let page = self.inner.iter().flatten()
+            .skip(self.state.try_into().unwrap())
+            .take(CHUNK_SIZE)
+            .cloned()
+            .collect();
         self.state = self.state + CHUNK_SIZE as u32;
+        &self.state;
         Some(page)
     }
 

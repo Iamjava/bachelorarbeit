@@ -1,23 +1,22 @@
-use crate::{Operator, Page};
+use crate::{FromBytes, Operator, };
 use crate::buffermanager::Buffermanager;
 
 
-#[derive(Debug)]
-pub struct Scan {
-    _bm: Buffermanager,
+pub struct Scan<F: FromBytes> {
+    _bm: Buffermanager<F>,
     // read pages as list of lists (vector at a time)
     state: usize,
 }
 
-impl Operator<Page> for Scan{
+impl<F: FromBytes> Operator<F> for Scan<F>{
     fn open() -> Self where Self: Sized{
         Scan {
-            _bm: Buffermanager::new(),
+            _bm: Buffermanager::<F>::new(),
             state: 0,
         }
     }
 
-    fn next(&mut self) -> Option<Page> {
+    fn next(&mut self) -> Option<Vec<F>> {
         todo!()
     }
 
@@ -32,7 +31,7 @@ mod tests {
     use crate::Operator;
     #[test]
     fn test_open(){
-        let open = Scan::open();
+        let open = Scan::<i32>::open();
         assert_eq!(open.state, 0);
     }
 }

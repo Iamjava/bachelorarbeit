@@ -1,18 +1,18 @@
-use crate::{FromBytes, Operator};
+use crate::{Chunk, DynTuple, Operator, TupleChunk, TupleType};
 use crate::{ CHUNK_SIZE,};
 
-pub struct Filter<F: FromBytes,O: Operator<F>> {
-    inner: Vec<F>,
+pub struct Filter<O: Operator> {
+    inner: Chunk<DynTuple>,
     child: O,
     is_finished:bool,
     // read pages as list of lists (vector at a time)
     state: usize,
-    predicate: fn(&F)->bool,
+    predicate: fn(&DynTuple)->bool,
 }
 
-impl<F: FromBytes + Clone + Default,O: Operator<F>> Filter<F,O>
+impl<O: Operator> Filter<O>
 {
-    fn try_new(operator: O, predicate: fn(&F) ->bool) -> Option<Self> {
+    fn try_new(operator: O, predicate: fn(&DynTuple) ->bool) -> Option<Self> {
         let mut filter = Filter {
             state: 0,
             is_finished: false,
@@ -24,13 +24,13 @@ impl<F: FromBytes + Clone + Default,O: Operator<F>> Filter<F,O>
         Some(filter)
     }
 
-    fn get_next(&mut self, predicate: fn(&F) -> bool) -> Option<Vec<F>> {
+    fn get_next(&mut self, predicate: fn(&DynTuple) -> bool) -> Option<TupleChunk> {
         if self.is_finished{
             return None
         }
 
         let mut local_state: usize = self.state;
-        let mut next_page_vec: Vec<F> = Vec::with_capacity(CHUNK_SIZE);
+        let mut next_page_vec = Vec::with_capacity(CHUNK_SIZE);
 
         while next_page_vec.len() < CHUNK_SIZE {
             let item = &self.inner[local_state];
@@ -52,7 +52,7 @@ impl<F: FromBytes + Clone + Default,O: Operator<F>> Filter<F,O>
                     }else if next_page_vec.len() ==0 {
                         return None;
                     }else{
-                        let mut to_append = vec![F::default(); CHUNK_SIZE- next_page_vec.len()];
+                        let mut to_append = vec![vec![TupleType::Empty;3]; CHUNK_SIZE- next_page_vec.len()];
                         next_page_vec.append(& mut to_append);
                         return Some(next_page_vec);
                     }
@@ -64,11 +64,11 @@ impl<F: FromBytes + Clone + Default,O: Operator<F>> Filter<F,O>
     }
 }
 
-impl<F:FromBytes + Clone + Default,O: Operator<F>,> Operator<F> for Filter<F,O> {
+impl<O: Operator,> Operator for Filter<O> {
     fn open() -> Self {
         todo!()
     }
-    fn next(&mut self) -> Option<Vec<F>> {
+    fn next(&mut self) -> Option<TupleChunk> {
         self.get_next(self.predicate)
     }
     fn close(&self) {
@@ -79,63 +79,15 @@ impl<F:FromBytes + Clone + Default,O: Operator<F>,> Operator<F> for Filter<F,O> 
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use crate::operator::mock_scan::ScanMock;
+    use crate::operator::buffer_mock::BufferMock;
     use crate::operator::filter::*;
 
     #[test]
     fn test_filter_1() {
-        let bm = ScanMock::<InnerPage>::new( vec![vec![3; 1]]);
-        let mut filter1 = Filter::try_new(bm, |x|x>&2).unwrap();
+        let bm = BufferMock::default();
+        let mut filter1 = Filter::try_new(bm, |x|x[0].inner_int()>2).unwrap();
         let last= filter1.next();
         assert!(last.is_some());
         assert!(filter1.next().is_none());
     }
-
-    #[test]
-    fn test_filter_2() {
-        let bm = ScanMock::new( vec![vec![3; CHUNK_SIZE], vec![4; CHUNK_SIZE-3]]);
-        let mut filter1 = Filter::try_new(bm, |x|x>&2).unwrap();
-        filter1.next();
-        let last= filter1.next();
-        assert!(last.is_some())
-    }
-
-    #[test]
-    fn test_double_filter() {
-        let bm = ScanMock::new( vec![vec![3; 1]]);
-        let filter1 = Filter::try_new(bm, |x|x>=&2).unwrap();
-        let mut filter2 = Filter::try_new(filter1, |x|x>&10).unwrap();
-        let a = filter2.next();
-        assert!( a.is_none());
-    }
-
-    #[test]
-    fn test_double_filter_1_5() {
-        let bm = ScanMock::new( vec![vec![122; CHUNK_SIZE],vec![4;CHUNK_SIZE],vec![5;CHUNK_SIZE]]);
-        let filter1 = Filter::try_new(bm, |x|x>=&2).unwrap();
-        let mut filter2 = Filter::try_new(filter1, |x|x>&4).unwrap();
-        let a = filter2.next();
-        filter2.next();
-        assert!( a.is_some());
-    }
-    #[test]
-    fn test_double_filter_2() {
-        let bm = ScanMock::new( vec![vec![122; CHUNK_SIZE-1],vec![4;CHUNK_SIZE],vec![5;CHUNK_SIZE]]);
-        let filter1 = Filter::try_new(bm, |x|x>=&2).unwrap();
-        let mut filter2 = Filter::try_new(filter1, |x|x>&4).unwrap();
-        let a = filter2.next();
-        filter2.next();
-        assert!( a.is_some());
-    }
-    /*
-    #[test]
-    fn test_filter() {
-        let vecs: Vec<Page> = vec![vec![1; CHUNK_SIZE], vec![5; CHUNK_SIZE -3], vec![4; CHUNK_SIZE -3], vec![6; CHUNK_SIZE -5]];
-
-        let mut unary: Filter = Filter::new_test(vecs,Buffermanager::new(),|x|x>&3);
-        assert!( &unary.get_next(|a| a > &3).is_some());
-        assert!( &unary.get_next(|a| a > &3).is_some());
-        assert!( &unary.get_next(|a| a > &3).is_some());
-    }
-     */
 }

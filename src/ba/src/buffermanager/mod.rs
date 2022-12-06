@@ -1,26 +1,37 @@
 use std::collections;
-use crate::{FromBytes, Operator,  PageIdentifier, VulcanoRequest, Page};
+use crate::{Operator, PageIdentifier, VulcanoRequest, Page, Chunk, DynTuple, TupleChunk, CHUNK_SIZE};
 use crate::BUFFER_SIZE;
+use crate::TupleType::TInt;
 use crate::VulcanoRequest::{Inedx, ScanAll};
 
 mod diskreader;
 
-pub struct Buffermanager<F: FromBytes>{
+pub struct Buffermanager{
     buffer: collections::HashMap<PageIdentifier,Page>,
     disk_reader: diskreader::DiskReader,
     workload: VulcanoRequest,
     state: usize,
-    produces: fn (&Page)->Vec<F>,
+    produces: fn (&Page)->TupleChunk,
 }
 
-impl<T: FromBytes> Buffermanager<T>{
-    pub fn new()->Self{
+impl Buffermanager{
+    pub fn new(produces: fn(&Page)->TupleChunk)->Self{
         Buffermanager{
             buffer: collections::HashMap::with_capacity(BUFFER_SIZE.try_into().unwrap()),
             disk_reader: diskreader::DiskReader::default(),
             workload: ScanAll,
             state: 0,
-            produces: T::to_self
+            produces: produces
+        }
+    }
+
+    pub fn default()->Self{
+        Buffermanager{
+            buffer: collections::HashMap::with_capacity(BUFFER_SIZE.try_into().unwrap()),
+            disk_reader: diskreader::DiskReader::default(),
+            workload: ScanAll,
+            state: 0,
+            produces: |a| vec![vec![TInt(3);3];CHUNK_SIZE]
         }
     }
 
@@ -44,12 +55,12 @@ impl<T: FromBytes> Buffermanager<T>{
     }
 }
 
-impl<F: FromBytes> Operator<F> for Buffermanager<F>{
+impl Operator for Buffermanager{
     fn open() -> Self where Self: Sized{
-        Buffermanager::new()
+        Buffermanager::default()
     }
 
-    fn next(&mut self) -> Option<Vec<F>> {
+    fn next(&mut self) -> Option<Chunk<DynTuple>>{
         match &self.workload{
             Inedx(_indicies)=>{ todo!() },
             ScanAll =>{
@@ -76,44 +87,9 @@ mod tests {
 
     #[test]
     fn test_next(){
-        let mut  bm  = Buffermanager::<u32>::open();
-        let next: Vec<u32>  = bm.next().unwrap();
-        print!("{:?}",next)
+        let mut  bm  = Buffermanager::open();
+        let next   = bm.next();
+        print!("{:?}",next.unwrap());
     }
 
-
-    #[test]
-    fn test_next_fail(){
-        let mut  bm  =Buffermanager::<InnerPage>::open();
-        for _i in 0..1000{
-            let _ = bm.next();
-        }
-        let next  = bm.next();
-        assert!(bm.state!=0);
-        assert_eq!(next,None)
-
-    }
-
-    #[test]
-    fn test_default(){
-        let dr = DiskReader::default();
-        let data = dr.read_classic(0);
-        dbg!(data);
-    }
-
-    #[test]
-    fn test_buffermanager_overflow() {
-        let mut  bm  = Buffermanager::<InnerPage>::new();
-        for i in 0..BUFFER_SIZE+1{
-            bm.buf_insert(i,vec![2 as u8;10]);
-        }
-    }
-    #[test]
-    fn test_buffermanager() {
-        // let mut bm = Buffermanager::new();
-        let mut  bm  = Buffermanager::<InnerPage>::new();
-        bm.get_page(&0);
-        assert!(bm.buf_contains(&0));
-        assert!(!bm.get_page(&0).expect("ERROR BUFFERMANAGER").is_empty());
-    }
 }

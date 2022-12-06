@@ -1,35 +1,35 @@
 use std::collections::hash_map;
-use crate::{CHUNK_SIZE, FromBytes, Operator};
+use crate::{CHUNK_SIZE, DynTuple, Operator, TupleChunk};
 use std::collections::hash_map::HashMap;
 use std::hash::Hash;
 
 
 
-pub struct HashJoin<F: FromBytes, G: FromBytes, O: Operator<F>, P:Operator<G>, K: Eq + Hash,C> {
+pub struct HashJoin< O: Operator, P:Operator, K: Eq + Hash> {
     left_child: O,
     right_child: P,
     is_built: bool,
-    hmap: hash_map::HashMap<K,F>,
+    hmap: hash_map::HashMap<K,DynTuple>,
     state: u32,
-    join_on_a: fn(&F)->K,
-    join_on_b: fn(&G)->K,
-    combine: fn(&F,&G)->C,
-    inner: Vec<G>,
+    join_on_a: fn(&DynTuple)->K,
+    join_on_b: fn(&DynTuple)->K,
+    combine: fn(&DynTuple,&DynTuple)->DynTuple,
+    inner: Vec<DynTuple>,
 }
 
-impl<F: FromBytes + Clone,G: FromBytes + Clone, O: Operator<F>, P: Operator<G>, K: Eq + Hash,C> HashJoin<F,G,O,P,K,C>
+impl<O: Operator, P: Operator, K: Eq + Hash> HashJoin<O,P,K>
 {
-    fn new(left_child: O, right_child: P, fn_left_to_join_attribute: fn(&F) ->K, fn_right_to_join_attribute: fn(&G) ->K, combine_fn: fn(&F, &G) ->C) -> Self {
+    fn new(left_child: O, right_child: P, fn_left_to_join_attribute: fn(&DynTuple) ->K, fn_right_to_join_attribute: fn(&DynTuple) ->K, combine_fn: fn(&DynTuple, &DynTuple) ->DynTuple) -> Self {
         Self{
             left_child,
             right_child,
             is_built:false,
-            hmap: HashMap::<K,F>::new(),
+            hmap: HashMap::<K,DynTuple>::new(),
             join_on_a: fn_left_to_join_attribute,
             join_on_b: fn_right_to_join_attribute,
             state: 0,
             combine: combine_fn,
-            inner: Vec::<G>::new(),
+            inner: Vec::<DynTuple>::new(),
         }
     }
 
@@ -45,26 +45,26 @@ impl<F: FromBytes + Clone,G: FromBytes + Clone, O: Operator<F>, P: Operator<G>, 
     }
 }
 
-impl<F: FromBytes + Clone, G: FromBytes + Clone, O: Operator<F>, P: Operator<G>, K: Eq + Hash,C> Operator<C> for HashJoin<F,G,O,P,K,C>{
+impl<O: Operator, P: Operator, K: Eq + Hash> Operator for HashJoin<O,P,K>{
     fn open() -> Self where Self: Sized {
         todo!()
-    } 
-    fn next(&mut self) -> Option<Vec<C>> {
+    }
+
+    fn next(&mut self) -> Option<TupleChunk> {
         if self.is_built {
             let mut next_page = Vec::with_capacity(CHUNK_SIZE);
             let mut local_state = self.state as usize;
             let jb = self.join_on_b;
             let combine = self.combine;
-            while next_page.len()<CHUNK_SIZE{
-                dbg!(&self.state);
-
+            while next_page.len()!=CHUNK_SIZE{
+                dbg!(&self.state, &self.inner.len());
                 if self.state==self.inner.len().try_into().unwrap(){
                     self.state = 0;
+                    local_state=0;
                     self.inner = self.right_child.next().unwrap();
                 }
                 let item = &self.inner[local_state];
                 let key = &(jb)(item);
-
                 if self.hmap.contains_key(key){
                     next_page.push(combine(&self.hmap.get(key).unwrap(),&item))
                 }
@@ -90,13 +90,14 @@ impl<F: FromBytes + Clone, G: FromBytes + Clone, O: Operator<F>, P: Operator<G>,
 #[cfg(test)]
 mod tests {
     use crate::operator::hashjoin::HashJoin;
-    use crate::operator::mock_scan::ScanMock;
+    use crate::operator::buffer_mock::BufferMock;
+    use crate::operator::scan::Scan;
     use super::*;
 
 
     #[test]
     fn test_open(){
-        let mut open = HashJoin::<u8,u8,ScanMock<u8>,ScanMock<u8>,u8,u8>::new(ScanMock::default(), ScanMock::default(), |a| *a+1, |a|*a, |a,b|*a+*b+100);
+        let mut open = HashJoin::new(Scan::default(), Scan::default(), |a|a[0].inner_int() , |a|a[0].inner_int(), |a,b|{let mut a = a.clone();a.append(&mut b.clone());a});
         dbg!(&open.next());
         dbg!(&open.hmap);
     }

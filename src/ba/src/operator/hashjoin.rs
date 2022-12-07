@@ -89,9 +89,7 @@ impl<O: Operator, P: Operator, K: Eq + Hash> Operator for HashJoin<O,P,K>{
 
 #[cfg(test)]
 mod tests {
-    use crate::operator::hashjoin::HashJoin;
-    use crate::operator::buffer_mock::BufferMock;
-    use crate::operator::scan::Scan;
+    use crate::operator::scan::*;
     use super::*;
 
 

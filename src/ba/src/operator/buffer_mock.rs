@@ -1,14 +1,15 @@
-use crate::{Chunk, CHUNK_SIZE, Operator, Page, InnerPage, TupleType, TupleChunk, DynTuple};
+use crate::{ CHUNK_SIZE, BufferOperator,  Column, DynValue};
 use std::default::Default;
-use crate::TupleType::{TBool, TFloat, TInt};
+use crate::DynValue::*;
 
+#[derive(Clone,Debug)]
 pub struct BufferMock {
-    inner: Vec<Chunk<DynTuple>>,
+    inner: Vec<Column<DynValue>>,
     state: u32,
 }
 
 impl BufferMock {
-    pub fn new(inner: Vec<TupleChunk>) -> Self{
+    pub fn new(inner: Vec<Column<DynValue>>) -> Self{
         BufferMock {
             inner,
             state: 0,
@@ -19,16 +20,17 @@ impl BufferMock {
 
 impl Default for BufferMock{
     fn default() -> Self{
-        BufferMock::new(vec![vec![vec![TInt(1);3]; CHUNK_SIZE],vec![vec![TInt(2);3]; CHUNK_SIZE],vec![vec![TInt(3);3]; CHUNK_SIZE]])
+       BufferMock::new(vec![vec![TInt(1),TInt(2),TInt(3),TInt(4)],vec![TInt(1),TInt(2),TInt(3),TInt(4)],vec![TInt(1),TInt(2),TInt(3),TInt(4)],vec![TInt(1),TInt(2),TInt(3),TInt(4)],vec![TInt(2); CHUNK_SIZE+4]])
+
     }
 }
 
-impl Operator for BufferMock{
+impl BufferOperator for BufferMock{
     fn open() -> Self where Self: Sized {
         todo!()
     }
 
-    fn next(&mut self) -> Option<TupleChunk> {
+    fn next(&mut self) -> Option<Column<DynValue>> {
         if self.state >= self.inner.iter().flatten().count().try_into().unwrap() {
             return None;
         }
@@ -39,7 +41,7 @@ impl Operator for BufferMock{
             .cloned()
             .collect();
         self.state = self.state + CHUNK_SIZE as u32;
-        &self.state;
+        //&self.state;
         Some(page)
     }
 
@@ -50,16 +52,13 @@ impl Operator for BufferMock{
 
 #[cfg(test)]
 mod tests {
-    use crate::CHUNK_SIZE;
-    use crate::Operator;
-    use crate::operator::buffer_mock::BufferMock;
-    use crate::TupleType::TBool;
 
+    use super::*;
     #[test]
-    fn test_next_TupleType() {
+    fn test_next_tt(){
         let mut mm = BufferMock::default();
-        let mut mm = BufferMock::default();
-        let mut mm = BufferMock::default();
+        let mut _mm2 = BufferMock::default();
+        let mut _mm3= BufferMock::default();
         let a = mm.next();
         let b = mm.next();
         dbg!(&b);

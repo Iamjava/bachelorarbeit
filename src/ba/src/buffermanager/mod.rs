@@ -1,7 +1,7 @@
 use std::collections;
 use crate::{Operator, PageIdentifier, VulcanoRequest, Page, Chunk, DynTuple, TupleChunk, CHUNK_SIZE};
 use crate::BUFFER_SIZE;
-use crate::TupleType::TInt;
+use crate::DynValue::TInt;
 use crate::VulcanoRequest::{Inedx, ScanAll};
 
 mod diskreader;
@@ -31,7 +31,7 @@ impl Buffermanager{
             disk_reader: diskreader::DiskReader::default(),
             workload: ScanAll,
             state: 0,
-            produces: |a| vec![vec![TInt(3);3];CHUNK_SIZE]
+            produces: |_a| vec![vec![TInt(3);3];CHUNK_SIZE]
         }
     }
 
@@ -80,10 +80,7 @@ impl Operator for Buffermanager{
 
 #[cfg(test)]
 mod tests {
-    use crate::buffermanager::Buffermanager;
-    use crate::buffermanager::diskreader::DiskReader;
-    use crate::{BUFFER_SIZE,  InnerPage};
-    use crate::Operator;
+    use super::*;
 
     #[test]
     fn test_next(){

@@ -1,4 +1,4 @@
-use crate::{Chunk, DynTuple, Operator, TupleChunk, TupleType};
+use crate::{Chunk, DynTuple, Operator, TupleChunk, DynValue};
 use crate::{ CHUNK_SIZE,};
 
 pub struct Filter<O: Operator> {
@@ -52,7 +52,7 @@ impl<O: Operator> Filter<O>
                     }else if next_page_vec.len() ==0 {
                         return None;
                     }else{
-                        let mut to_append = vec![vec![TupleType::Empty;3]; CHUNK_SIZE- next_page_vec.len()];
+                        let mut to_append = vec![vec![DynValue::Empty; 3]; CHUNK_SIZE- next_page_vec.len()];
                         next_page_vec.append(& mut to_append);
                         return Some(next_page_vec);
                     }
@@ -79,15 +79,16 @@ impl<O: Operator,> Operator for Filter<O> {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use crate::operator::buffer_mock::BufferMock;
     use crate::operator::filter::*;
+    use crate::operator::scan::Scan;
 
     #[test]
     fn test_filter_1() {
-        let bm = BufferMock::default();
-        let mut filter1 = Filter::try_new(bm, |x|x[0].inner_int()>2).unwrap();
+        let bm = Scan::default();
+        let mut filter1 = Filter::try_new(bm, |x|x[0].inner_int()>1).unwrap();
         let last= filter1.next();
+        println!("{:?}",last);
         assert!(last.is_some());
-        assert!(filter1.next().is_none());
+        assert!(last.is_some());
     }
 }

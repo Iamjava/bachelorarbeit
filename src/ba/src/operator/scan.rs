@@ -44,7 +44,7 @@ impl<O: BufferOperator> Operator for Scan<O>{
         self.current_loaded_data.clear();
         for s in &mut self.sources{
             count = count +1;
-            let n= s.next()?;
+            let n= s.materialize()?;
             //println!("Column {count} {:?}",n);
             let vecs = n;
             self.current_loaded_data.push(vecs)

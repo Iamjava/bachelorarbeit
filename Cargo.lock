@@ -40,7 +40,7 @@ version = "0.1.0"
 dependencies = [
  "rand",
  "rio",
- "tokio 0.3.7",
+ "tokio",
  "tokio-uring",
 ]
 
@@ -636,18 +636,6 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46409491c9375a693ce7032101970a54f8a2010efb77e13f70788f0d84489e39"
-dependencies = [
- "autocfg",
- "pin-project-lite",
- "slab",
- "tokio-macros",
-]
-
-[[package]]
-name = "tokio"
 version = "1.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eab6d665857cc6ca78d6e80303a02cea7a7851e85dfbd77cbdc09bd129f1ef46"
@@ -657,14 +645,15 @@ dependencies = [
  "mio",
  "pin-project-lite",
  "socket2",
+ "tokio-macros",
  "windows-sys",
 ]
 
 [[package]]
 name = "tokio-macros"
-version = "0.3.2"
+version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46dfffa59fc3c8aad216ed61bdc2c263d2b9d87a9c8ac9de0c11a813e51b6db7"
+checksum = "d266c00fde287f55d3f1c3e96c500c362a2b8c695076ec180f27918820bc6df8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -682,7 +671,7 @@ dependencies = [
  "scoped-tls",
  "slab",
  "socket2",
- "tokio 1.23.0",
+ "tokio",
 ]
 
 [[package]]

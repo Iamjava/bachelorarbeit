@@ -64,9 +64,13 @@ impl DynValue {
     }
 }
 
+
+
+// Produce Consume 
 pub trait PushOperator{
-    fn execute(&mut self);
+    fn execute(&mut self)->Option<u32>;
 }
+
 
 #[derive(Clone)]
 pub enum OperatorResultType{
@@ -81,11 +85,13 @@ pub trait Operator{
     fn close(&self);
 }
 
+// next -> materialisieren 
 pub trait BufferOperator{
     fn open()->Self where Self: Sized;
-    fn next(&mut self)-> Option<Column<DynValue>>;
+    fn materialize(&mut self)-> Option<Column<DynValue>>;
     fn close(&self);
 }
+
 pub fn a() -> i32 {
     return 1;
 }

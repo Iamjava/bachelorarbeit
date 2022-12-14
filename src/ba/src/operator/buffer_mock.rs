@@ -34,7 +34,7 @@ impl BufferOperator for BufferMock {
         todo!()
     }
 
-    fn next(&mut self) -> Option<Column<DynValue>> {
+    fn materialize(&mut self) -> Option<Column<DynValue>> {
         if self.state >= self.inner.iter().flatten().count().try_into().unwrap() {
             return None;
         }
@@ -66,8 +66,8 @@ mod tests {
         let mut mm = BufferMock::default();
         let mut _mm2 = BufferMock::default();
         let mut _mm3 = BufferMock::default();
-        let a = mm.next();
-        let b = mm.next();
+        let a = mm.materialize();
+        let b = mm.materialize();
         dbg!(&b);
 
         assert!(a.is_some());
@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn test_next() {
         let mut mm = BufferMock::default();
-        let a = mm.next();
+        let a = mm.materialize();
         assert!(a.is_some());
     }
 }

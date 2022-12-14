@@ -1,5 +1,5 @@
 use crate::{Chunk, DynTuple, Operator, TupleChunk, DynValue};
-use crate::CHUNK_SIZE;
+use crate::{ CHUNK_SIZE,};
 
 pub struct Filter<O: Operator> {
     inner: Chunk<DynTuple>,
@@ -18,7 +18,7 @@ impl<O: Operator> Filter<O>
             is_finished: false,
             inner: vec![],
             child: operator,
-            predicate
+            predicate: predicate
         };
         filter.inner = filter.child.next().unwrap();
         Some(filter)

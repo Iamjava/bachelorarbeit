@@ -3,7 +3,6 @@ use std::os::unix::fs::FileExt;
 use crate::{CHUNK_SIZE, Page, DEFAULT_FILENAME, };
 
 
-#[derive(Debug)]
 pub struct DiskReader {
     ring: rio::Rio,
     file: fs::File,

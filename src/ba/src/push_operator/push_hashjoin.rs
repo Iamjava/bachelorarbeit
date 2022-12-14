@@ -57,6 +57,7 @@ impl<O: Operator, P: Operator, K: Eq + Hash> Operator for HashJoin<O,P,K>{
             let jb = self.join_on_b;
             let combine = self.combine;
             while next_page.len()!=CHUNK_SIZE{
+                dbg!(&self.state, &self.inner.len());
                 if self.state==self.inner.len().try_into().unwrap(){
                     self.state = 0;
                     local_state=0;
@@ -88,14 +89,13 @@ impl<O: Operator, P: Operator, K: Eq + Hash> Operator for HashJoin<O,P,K>{
 
 #[cfg(test)]
 mod tests {
-    use crate::DynValue;
     use crate::operator::scan::*;
     use super::*;
 
 
     #[test]
     fn test_open(){
-        let mut open = HashJoin::new(Scan::default(), Scan::default(), |a|a[0].inner_int() , |a|a[0].inner_int(), |a,_b|{let mut a = a.clone();a.append(&mut vec![DynValue::TBool(true)]);a});
+        let mut open = HashJoin::new(Scan::default(), Scan::default(), |a|a[0].inner_int() , |a|a[0].inner_int(), |a,b|{let mut a = a.clone();a.append(&mut b.clone());a});
         dbg!(&open.next());
         dbg!(&open.hmap);
     }

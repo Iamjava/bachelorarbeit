@@ -1,9 +1,10 @@
 extern crate core;
-
+use std::fmt::{Debug, Formatter};
 use crate::DynValue::{TBool, TFloat, TInt};
 
 pub mod buffermanager;
 pub mod operator;
+pub mod push_operator;
 
 pub type InnerPage = u8;
 pub type Page = Vec<InnerPage>;
@@ -24,12 +25,23 @@ pub enum VulcanoRequest{
     Inedx(Vec<PageIdentifier>)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum DynValue {
     TFloat(f32),
     TBool(bool),
     TInt(u32),
     Empty,
+}
+
+impl Debug for DynValue{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            TBool(a )=> write!(f, "DynBol[{a}]"),
+            TFloat(a )=> write!(f, "DynFlt[{a}]"),
+            TInt(a )=> write!(f, "DynInt[{a}]"),
+           _=> write!(f, "DynNix [X]"),
+        }
+    }
 }
 
 impl DynValue {
@@ -50,6 +62,17 @@ impl DynValue {
             a.clone()
         }else {panic!("cast failed")}
     }
+}
+
+pub trait PushOperator{
+    fn execute(&mut self);
+}
+
+#[derive(Clone)]
+pub enum OperatorResultType{
+    NeedMoreInput,
+    HaveMoreInput,
+    Finished,
 }
 
 pub trait Operator{

@@ -65,12 +65,26 @@ impl DynValue {
 }
 
 
-
 // Produce Consume 
 pub trait PushOperator{
-    fn execute(&mut self)->Option<u32>;
+    fn execute(&self, tuple: OperatorResult);
 }
 
+// Sink takes Data
+pub trait Sink{
+    fn take(&mut self)->Option<u32>;
+}
+
+// Source emits Data
+pub trait Source{
+    fn emit(&mut self, tuple: OperatorResult);
+}
+
+#[derive(Clone)]
+pub enum OperatorResult{
+    SingleMatch(DynTuple),
+    MultiMatch(Vec<DynTuple>),
+}
 
 #[derive(Clone)]
 pub enum OperatorResultType{

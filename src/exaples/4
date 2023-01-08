@@ -1,0 +1,38 @@
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::sync::mpsc;
+use tokio::time::timeout;
+use uring_tokio::{IoUring, Scan};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Set up the uring-tokio runtime
+    let mut uring = IoUring::new(8)?;
+
+    // Set up a buffer to hold the data read from the disk
+    let mut buf = vec![0; 4096];
+
+    // Set up the scan operator
+    let scan = Arc::new(Scan::new(&uring));
+
+    // Set up a channel to send the result of the scan operation
+    let (mut sender, mut receiver) = mpsc::channel(1);
+
+    // Spawn a task to receive and process the result of the scan operation
+    let receiver_task = tokio::spawn(async move {
+        while let Some(result) = receiver.recv().await {
+            // Process the result of the scan operation...
+            println!("Received result: {:?}", result);
+        }
+    });
+
+    // Read a page of disk and send the result to the receiver task
+    let file = tokio::fs::File::open("/dev/sda").await?;
+    let read = timeout(Duration::from_secs(1), scan.read(&file, &mut buf)).await?;
+    sender.send(read).await?;
+
+    // Wait for the receiver task to complete
+    receiver_task.await?;
+
+    Ok(())
+}

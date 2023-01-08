@@ -1,0 +1,54 @@
+use std::collections::LinkedList;
+use std::collections::hash_map::{HashMap, Entry};
+
+struct BufferManager {
+    buffers: HashMap<String, String>,
+    lru_list: LinkedList<String>,
+    capacity: usize,
+}
+
+impl BufferManager {
+    fn new(capacity: usize) -> Self {
+        Self {
+            buffers: HashMap::new(),
+            lru_list: LinkedList::new(),
+            capacity,
+        }
+    }
+
+    fn get(&mut self, key: &str) -> Option<&str> {
+        if let Some(value) = self.buffers.get(key) {
+            // Move the accessed key to the back of the LRU list
+            let key = key.to_string();
+            self.lru_list.push_back(key);
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    fn insert(&mut self, key: &str, value: &str) {
+        let key = key.to_string();
+        let value = value.to_string();
+
+        match self.buffers.entry(key.clone()) {
+            Entry::Occupied(mut entry) => {
+                // Update the value and move the key to the back of the LRU list
+                *entry.get_mut() = value;
+                self.lru_list.push_back(key);
+            }
+            Entry::Vacant(entry) => {
+                // Insert the new key and value and add it to the back of the LRU list
+                entry.insert(value);
+                self.lru_list.push_back(key);
+
+                // Evict the least recently used key if the capacity is reached
+                if self.buffers.len() > self.capacity {
+                    if let Some(key) = self.lru_list.pop_front() {
+                        self.buffers.remove(&key);
+                    }
+                }
+            }
+        }
+    }
+}

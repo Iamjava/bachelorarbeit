@@ -1,0 +1,62 @@
+use std::sync::mpsc;
+use std::thread;
+
+fn main() {
+    // Create a new channel
+    let (tx, rx) = mpsc::channel();
+
+    // Spawn a new thread to be the data producer
+    thread::spawn(move || {
+        // Retrieve data from the database and send it to the consumer
+        let data = retrieve_data_from_database();
+        tx.send(data).unwrap();
+    });
+
+    // Spawn a new thread to be the first stage of the pipeline
+    let (stage1_tx, stage1_rx) = mpsc::channel();
+    thread::spawn(move || {
+        // Process the data and send it to the next stage
+        for val in rx {
+            let processed = process_data(val);
+            stage1_tx.send(processed).unwrap();
+        }
+    });
+
+    // Spawn two new threads to be the second stage of the pipeline
+    let (stage2_1_tx, stage2_1_rx) = mpsc::channel();
+    let stage2_1_handle = thread::spawn(move || {
+        // Process the data and send it to the next stage
+        for val in stage1_rx {
+            let processed = process_data(val);
+            stage2_1_tx.send(processed).unwrap();
+        }
+    });
+    let (stage2_2_tx, stage2_2_rx) = mpsc::channel();
+    let stage2_2_handle = thread::spawn(move || {
+        // Process the data and send it to the next stage
+        for val in stage1_rx {
+            let processed = process_data(val);
+            stage2_2_tx.send(processed).unwrap();
+        }
+    });
+
+    // Wait for both threads in the second stage to complete
+    stage2_1_handle.join().unwrap();
+    stage2_2_handle.join().unwrap();
+
+    // Merge the results from the two threads in the second stage
+    let (merge_tx, merge_rx) = mpsc::channel();
+    thread::spawn(move || {
+        for val in stage2_1_rx {
+            merge_tx.send(val).unwrap();
+        }
+        for val in stage2_2_rx {
+            merge_tx.send(val).unwrap();
+        }
+    });
+
+    // The main thread is the final stage of the pipeline
+    for val in merge_rx {
+        println!("Received {}", val);
+    }
+}

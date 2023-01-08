@@ -1,0 +1,43 @@
+use tokio::sync::mpsc;
+
+#[tokio::main]
+async fn main() {
+    // Create a new channel
+    let (mut tx, mut rx) = mpsc::channel(10);
+
+    // Spawn a new task to be the data producer
+    tokio::spawn(async move {
+        // Retrieve data from the database and send it to the consumer
+        let data = retrieve_data_from_database().await;
+        tx.send(data).await.unwrap();
+    });
+
+    // Spawn a new task to be the first stage of the pipeline
+    let (mut stage1_tx, mut stage1_rx) = mpsc::channel(10);
+    tokio::spawn(async move {
+        // Process the data and send it to the next stage
+        while let Some(val) = rx.recv().await {
+            let processed = process_data(val);
+            stage1_tx.send(processed).await.unwrap();
+        }
+    });
+
+    // Spawn a new task to be the second stage of the pipeline
+    let (mut stage2_tx, mut stage2_rx) = mpsc::channel(10);
+    tokio::spawn(async move {
+        // Process the data and send it to the next stage
+        while let Some(val) = stage1_rx.recv().await {
+            let processed = process_data(val);
+            stage2_tx.send(processed).await.unwrap();
+        }
+    });
+
+    // The main task is the final stage of the pipeline
+    while let Some(val) = stage2_rx.recv().await {
+        println!("Received {}", val);
+    }
+}
+
+This code creates a pipeline with three stages, each running in its own Tokio task. The first stage retrieves data from a database and sends it to the second stage, which processes the data and sends it to the third stage. The main task is the final stage, which receives the processed data and does something with it.
+
+Note that this is just one way to implement a push-based pipeline using Tokio channels, and there are many other ways you could structure the code depending on your specific requirements.

@@ -1,0 +1,58 @@
+struct BufferManager {
+    buffers: RwLock<HashMap<String, String>>,
+    lru_list: RwLock<LinkedList<String>>,
+    capacity: usize,
+}
+
+impl BufferManager {
+    fn new(capacity: usize) -> Self {
+        Self {
+            buffers: RwLock::new(HashMap::new()),
+            lru_list: RwLock::new(LinkedList::new()),
+            capacity,
+        }
+    }
+
+    fn get(&self, key: &str) -> Option<String> {
+        let buffers = self.buffers.read().unwrap();
+        let lru_list = self.lru_list.read().unwrap();
+
+        if let Some(value) = buffers.get(key) {
+            // Move the accessed key to the back of the LRU list
+            let key = key.to_string();
+            let mut lru_list = self.lru_list.write().unwrap();
+            lru_list.push_back(key);
+            Some(value.to_string())
+        } else {
+            None
+        }
+    }
+
+    fn insert(&self, key: &str, value: &str) {
+        let mut buffers = self.buffers.write().unwrap();
+        let mut lru_list = self.lru_list.write().unwrap();
+
+        let key = key.to_string();
+        let value = value.to_string();
+
+        match buffers.entry(key.clone()) {
+            Entry::Occupied(mut entry) => {
+                // Update the value and move the key to the back of the LRU list
+                *entry.get_mut() = value;
+                lru_list.push_back(key);
+            }
+            Entry::Vacant(entry) => {
+                // Insert the new key and value and add it to the back of the LRU list
+                entry.insert(value);
+                lru_list.push_back(key);
+
+                // Evict the least recently used key if the capacity is reached
+                if buffers.len() > self.capacity {
+                    if let Some(key) = lru_list.pop_front() {
+                        buffers.remove(&key);
+                    }
+                }
+            }
+        }
+    }
+}

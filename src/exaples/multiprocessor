@@ -1,0 +1,73 @@
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
+
+struct Multiprocessor<T, U> {
+    receiver_1: mpsc::Receiver<T>,
+    receiver_2: mpsc::Receiver<U>,
+    sender: mpsc::Sender<(T, U)>,
+    closure: Box<dyn Fn(T, U) -> (T, U) + Send + Sync>,
+    handle: Option<JoinHandle<()>>,
+}
+
+impl<T, U> Multiprocessor<T, U> {
+    fn new(receiver_1: mpsc::Receiver<T>, receiver_2: mpsc::Receiver<U>, sender: mpsc::Sender<(T, U)>, closure: Box<dyn Fn(T, U) -> (T, U) + Send + Sync>) -> Self {
+        Self {
+            receiver_1,
+            receiver_2,
+            sender,
+            closure,
+            handle: None,
+        }
+    }
+
+    fn start(&mut self) {
+        let receiver_1 = self.receiver_1.clone();
+        let receiver_2 = self.receiver_2.clone();
+        let sender = self.sender.clone();
+        let closure = self.closure.clone();
+        let handle = tokio::spawn(async move {
+            let mut result_1 = None;
+            let mut result_2 = None;
+            loop {
+                tokio::select! {
+                    Some(val) = receiver_1.recv() => {
+                        result_1 = Some(val);
+                    },
+                    Some(val) = receiver_2.recv() => {
+                        result_2 = Some(val);
+                    },
+                    complete if result_1.is_some() && result_2.is_some() => {
+                        let processed = (closure)(result_1.unwrap(), result_2.unwrap());
+                        sender.send(processed).await.unwrap();
+                        result_1 = None;
+                        result_2 = None;
+                    }
+                }
+            }
+        });
+        self.handle = Some(handle);
+    }
+}
+
+impl<T, U> Drop for Multiprocessor<T, U> {
+    fn drop(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            handle.cancel().unwrap();
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let (sender_1, mut receiver_1) = mpsc::channel(1);
+    let (sender_2, mut receiver_2) = mpsc::channel(1);
+    let (mut sender_3, receiver_3) = mpsc::channel(1);
+
+    let mut iprocessor = Multiprocessor::new(receiver_1, receiver_2, sender_3, Box::new(|x, y| (x + 1, y * 2)));
+    iprocessor.start();
+
+    sender_1.send(1).await.unwrap();
+    sender_2.send(2).await.unwrap();
+    assert_eq!(receiver_3.recv().await.unwrap(), (2, 4));
+}

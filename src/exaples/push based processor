@@ -1,0 +1,57 @@
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
+
+struct Processor<T, U> {
+    receiver: mpsc::Receiver<T>,
+    sender: mpsc::Sender<U>,
+    closure: Box<dyn Fn(T) -> U + Send + Sync>,
+    handle: Option<JoinHandle<()>>,
+}
+
+impl<T, U> Processor<T, U> {
+    fn new(receiver: mpsc::Receiver<T>, sender: mpsc::Sender<U>, closure: Box<dyn Fn(T) -> U + Send + Sync>) -> Self {
+        Self {
+            receiver,
+            sender,
+            closure,
+            handle: None,
+        }
+    }
+
+    fn start(&mut self) {
+        let receiver = self.receiver.clone();
+        let sender = self.sender.clone();
+        let closure = self.closure.clone();
+        let handle = tokio::spawn(async move {
+            while let Some(result) = receiver.recv().await {
+                let processed = (closure)(result);
+                sender.send(processed).await.unwrap();
+            }
+        });
+        self.handle = Some(handle);
+    }
+}
+
+impl<T, U> Drop for Processor<T, U> {
+    fn drop(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            handle.cancel().unwrap();
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let (sender_1, mut receiver_1) = mpsc::channel(1);
+    let (mut sender_2, receiver_2) = mpsc::channel(1);
+
+    let mut processor_1 = Processor::new(receiver_1, sender_2, Box::new(|x| x + 1));
+    processor_1.start();
+
+    let mut processor_2 = Processor::new(receiver_2, sender_1, Box::new(|x| x * 2));
+    processor_2.start();
+
+    sender_1.send(1).await.unwrap();
+    assert_eq!(receiver_1.recv().await.unwrap(), 4);
+}

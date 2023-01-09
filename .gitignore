@@ -2,6 +2,7 @@
 # will have compiled files and executables
 debug/
 target/
+src/examles/
 
 src/ba/debug/
 src/ba/target/

@@ -2,8 +2,7 @@ use crate::{Chunk, DynTuple, Operator, TupleChunk, DynValue, OperatorResult, Pus
 use crate::{ CHUNK_SIZE,};
 use crate::push_operator::push_sink::PushSink;
 
-
-type Predicate = fn(DynTuple)->bool;
+type Predicate = fn(&DynTuple)->bool;
 
 pub struct PushFilter<O: PushOperator> {
     sink: O,
@@ -16,13 +15,19 @@ impl<O: PushOperator> PushFilter<O>{
             sink: o,
             predicate,
         }
-
     }
 }
 
 impl<O: PushOperator> PushOperator for PushFilter<O>{
     fn execute(&self, tuple: OperatorResult){
-        self.sink.execute(tuple);
+        match tuple {
+            OperatorResult::SingleMatch(ref a)=>{
+                if (self.predicate)(a) {
+                    self.sink.execute(tuple);
+                }
+            },
+            OperatorResult::MultiMatch(a)=>a.iter().for_each(|a|print!("IMPLEMENT ME")),
+        }
     }
 }
 

@@ -26,6 +26,12 @@ pub enum VulcanoRequest{
 }
 
 #[derive(Clone)]
+pub enum Either<U,V> {
+    Left(U),
+    Right(V),
+}
+
+#[derive(Clone)]
 pub enum DynValue {
     TFloat(f32),
     TBool(bool),

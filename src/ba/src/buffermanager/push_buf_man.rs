@@ -4,14 +4,14 @@ use std::collections::LinkedList;
 use std::collections::hash_map::Entry;
 use std::hash::Hash;
 
-struct BufferManager<U,V> {
+pub struct PushBufferManager<U,V> {
     buffer: RwLock<HashMap<U, V>>,
     lru_list: RwLock<LinkedList<U>>,
     capacity: usize,
 }
 
-impl<U : Eq+PartialEq+Hash + Clone,V: Copy> BufferManager<U,V> {
-    fn new(capacity: usize) -> Self {
+impl<U : Eq+PartialEq+Hash + Clone,V: Copy> PushBufferManager<U,V> {
+    pub fn new(capacity: usize) -> Self {
         Self {
             buffer: RwLock::new(HashMap::new()),
             lru_list: RwLock::new(LinkedList::new()),
@@ -19,7 +19,7 @@ impl<U : Eq+PartialEq+Hash + Clone,V: Copy> BufferManager<U,V> {
         }
     }
 
-    async fn get(&self, key: &U) -> Option<V> {
+    pub async fn get(&self, key: &U) -> Option<V> {
         let  buffers = self.buffer.read().await;
         let mut lru_list = self.lru_list.write().await;
         let mut ret = None;
@@ -34,7 +34,7 @@ impl<U : Eq+PartialEq+Hash + Clone,V: Copy> BufferManager<U,V> {
         return ret;
     }
 
-    async fn insert(&self, key: U, value: V) {
+    pub async fn insert(&self, key: U, value: V) {
         let mut buffers = self.buffer.write().await;
         let mut lru_list = self.lru_list.write().await;
 
@@ -69,7 +69,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_buf_man() {
-        let bm = BufferManager::new(2);
+        let bm = PushBufferManager::new(2);
         let _ = bm.insert("Hello","world").await;
         assert_eq!(bm.buffer.read().await.len(),1);
         let _ = bm.insert("Hello2","world").await;

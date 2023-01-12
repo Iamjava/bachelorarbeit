@@ -51,6 +51,7 @@ impl Buffermanager{
     }
 
     // eviction stratey here
+    #[allow(dead_code)]
     fn buf_contains(&mut self, pageid: &PageIdentifier)->bool{
         self.buffer.contains_key(pageid)
     }
@@ -82,6 +83,13 @@ impl Operator for Buffermanager{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use push_buf_man;
+
+    #[tokio::test]
+    async fn test_pus_buffman(){
+        let bm  = push_buf_man::PushBufferManager::new(3);
+        bm.insert("Hello","World").await;
+    }
 
     #[test]
     fn test_next(){

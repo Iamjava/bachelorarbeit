@@ -2,11 +2,13 @@ use std::sync::{Arc,};
 use tokio::sync::mpsc;
 use tokio::task;
 
+#[allow(dead_code)]
 struct Multiprocessor<T, U> {
     receiver:mpsc::Receiver<T>,
     sender: Arc<mpsc::Sender<T>>,
     closure: fn(Vec<T>,Vec<U>) -> T,
 }
+
 
 impl<T:Clone + std::fmt::Debug + Send + Sync + 'static, U:Clone + std::fmt::Debug +Send + Sync + 'static> Multiprocessor<T, U> {
     fn create(receiver_1: mpsc::Receiver<T>, closure: fn (Vec<T>, Vec<U>) -> T ) -> (Self, mpsc::Receiver<T>) {
@@ -19,18 +21,20 @@ impl<T:Clone + std::fmt::Debug + Send + Sync + 'static, U:Clone + std::fmt::Debu
     }
 
     // Hier den Typen als generic nehmen
-    async fn start(self,)->task::JoinHandle<String>{
+    async fn start(self,)->task::JoinHandle<Vec<T>>{
         let mut receiver = self.receiver;
         let  sender = self.sender;
 
         let handle = task::spawn(async move {
             let mut i = 0;
+            let mut agg = Vec::with_capacity(10);
             while i <= 4{
                 let r = receiver.recv().await.unwrap();
+                agg.push(r.clone());
                 sender.send(r.clone()).await.unwrap();
                 i = i+1;
             }
-            return "finished".to_string();
+            return agg;
         });
         return handle;
     }

@@ -5,6 +5,7 @@ use crate::DynValue::TInt;
 use crate::VulcanoRequest::{Inedx, ScanAll};
 
 mod diskreader;
+mod push_buf_man;
 
 pub struct Buffermanager{
     buffer: collections::HashMap<PageIdentifier,Page>,
@@ -88,5 +89,6 @@ mod tests {
         let next   = bm.next();
         print!("{:?}",next.unwrap());
     }
+
 
 }

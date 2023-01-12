@@ -1,5 +1,4 @@
-use crate::{Chunk, DynTuple, Operator, TupleChunk, DynValue, OperatorResult, PushOperator};
-use crate::{ CHUNK_SIZE,};
+use crate::{ OperatorResult, PushOperator,};
 
 pub struct PushSink {}
 

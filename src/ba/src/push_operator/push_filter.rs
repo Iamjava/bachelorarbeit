@@ -1,5 +1,4 @@
-use crate::{Chunk, DynTuple, Operator, TupleChunk, DynValue, OperatorResult, PushOperator};
-use crate::{ CHUNK_SIZE,};
+use crate::{ DynTuple, OperatorResult, PushOperator};
 use crate::push_operator::push_sink::PushSink;
 
 type Predicate = fn(&DynTuple)->bool;
@@ -26,7 +25,7 @@ impl<O: PushOperator> PushOperator for PushFilter<O>{
                     self.sink.execute(tuple);
                 }
             },
-            OperatorResult::MultiMatch(a)=>a.iter().for_each(|a|print!("IMPLEMENT ME")),
+            OperatorResult::MultiMatch(a)=>a.iter().for_each(|_|print!("IMPLEMENT ME")),
         }
     }
 }
@@ -46,13 +45,11 @@ impl Default for PushFilter<PushSink>
 mod tests {
     use crate::*;
     use super::*;
-    use crate::operator::filter::*;
-    use crate::operator::scan::Scan;
 
     #[test]
     fn test_filter_1() {
         let fil = PushFilter::default();
-        let fil2 = PushFilter::new(fil, |a| true);
+        let fil2 = PushFilter::new(fil, |_| true);
         let opres = OperatorResult::SingleMatch(vec![DynValue::TBool(true),DynValue::TFloat(1.2)]);
         fil2.execute(opres);
     }
